@@ -25,7 +25,9 @@
 #include "stdafx.h"
 #include "luanovel.h"
 #include "core.h"
+#include "text.h"
 #include "render-engine.h"
+#include "character.h"
 #include "helper.h"
 
 #define MAX_LOADSTRING 100
@@ -79,66 +81,27 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	helper_lua_addNewFunction(L, "message", [](lua_State* L) {
 		const char* message = lua_tostring(L, -1);
 		if (message == NULL) return 0;
+		lua_pop(L, 1);
 		MessageBoxA(ghWnd, message, NULL, MB_OK);
-		return 1;
+		return 0;
 	});
+	lua_pushliteral(L, "outputmode");
+	lua_pushliteral(L, "stdout");
+	lua_rawset(L, -3);
 	lua_rawset(L, -3);
 
 	lua_pushliteral(L, "text");
 	lua_newtable(L);
-	helper_lua_addNewFunction(L, "print", [](lua_State* L) {
-		const char* line = lua_tostring(L, -1);
-		lua_pop(L, 1);
-		int len = strlen(line);
-		void *character = lua_touserdata(L, -1);
-		bool escaping = false;
-
-		std::string output;
-		for (const char* i = line; *i != 0; i++) {
-			if (escaping) {
-				output += *i;
-				escaping = false;
-				continue;
-			}
-			if (*i == '\\') {
-				escaping = true;
-			}
-			else if (*i == '\x03') {// Lua inline expression
-				char* exp = strdup(++i);
-				char* texp = exp;
-				for (; *texp != '\x03'; texp++, i++) {
-					if (*texp == 0) {
-						lua_pushliteral(L, "Unexpected end of Lua inline expression");
-						free(exp);
-						return lua_error(L);
-					}
-				}
-				*texp = 0;
-				lua_checkstack(L, 1);
-				lua_getglobal(L, "tostring");
-				char* expression = (char *)malloc(strlen(exp) + 10);
-				strcpy(expression, "return (");
-				strcat(expression, exp);
-				strcat(expression, ")");
-				luaL_dostring(L, expression);
-				free(exp);
-				free(expression);
-				lua_pcall(L, 1, 1, 0);
-
-				output += lua_tostring(L, -1);
-				lua_pop(L, 1);
-			}
-			else {
-				output += *i;
-			}
-		}
-		lua_pushstring(L, output.c_str());
-		return 1;
-	});
+	helper_lua_addNewFunction(L, "_interpret", &_lua_text_interpret);
 	lua_rawset(L, -3);
+
+	draw_initialize(L);
+	character_initialize(L);
+
 	lua_setglobal(L, "luanovel");
 
-	luaL_dofile(L, "init.txt");
+	luaL_dofile(L, "init.luac");
+	luaL_dofile(L, "main.txt");
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
 		TranslateMessage(&msg);

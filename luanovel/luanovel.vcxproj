@@ -55,7 +55,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>lib/lua-5.3.0d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>lib/lua-5.3.0d.lib;gdiplus.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -76,6 +76,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="character.h" />
     <ClInclude Include="core.h" />
     <ClInclude Include="helper.h" />
     <ClInclude Include="luanovel.h" />
@@ -83,8 +84,10 @@
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="text.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="character.cpp" />
     <ClCompile Include="core.cpp" />
     <ClCompile Include="helper.cpp" />
     <ClCompile Include="luanovel.cpp" />
@@ -93,6 +96,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="text.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="luanovel.rc" />
@@ -103,6 +107,13 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\LICENSE" />
+    <CustomBuild Include="init.lua">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(ProjectDir)\util\luac.exe" -o "$(IntermediateOutputPath)\%(Identity)c" -s "%(FullPath)"
+cp "$(IntermediateOutputPath)\%(Identity)c" "$(ProjectDir)"
+cp "$(IntermediateOutputPath)\%(Identity)c" "$(OutputPath)"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntermediateOutputPath)\%(Identity)c;%(Outputs)</Outputs>
+    </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

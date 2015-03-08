@@ -1,4 +1,0 @@
-a = 3
-b = 4
-str = luanovel.text.print("\x03a\x03 + \x03b\x03 = \x03a+b\x03")
-luanovel.system.message(str)

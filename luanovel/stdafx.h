@@ -26,3 +26,16 @@
 using namespace Gdiplus;
 
 #include "lib/lua.hpp"
+
+#include <ft2build.h>
+#include FT_FREETYPE_H
+#include FT_OUTLINE_H
+#include FT_GLYPH_H
+#include FT_BITMAP_H
+
+#include <fontconfig/fontconfig.h>
+
+#include <cairo.h>
+#include <cairo-win32.h>
+#include <pango/pangocairo.h>
+#include <pango/pangoft2.h>

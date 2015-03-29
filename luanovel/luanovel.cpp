@@ -57,6 +57,8 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 		// Not enough memory
 		return 1;
 	}
+
+	// Load lua libraries
 	luaopen_base(L);
 	luaopen_coroutine(L);
 	luaopen_package(L);
@@ -68,11 +70,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	LoadString(hInstance, IDC_LUANOVEL, szWindowClass, MAX_LOADSTRING);
 	MyRegisterClass(hInstance);
 
-	if (!InitInstance (hInstance, nCmdShow))
-	{
-		return FALSE;
-	}
-
+	// Initialize luanovel library functions
 	lua_checkstack(L, 5);
 
 	lua_newtable(L);
@@ -102,13 +100,19 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 	luaL_dofile(L, "init.luac");
 	luaL_dofile(L, "main.txt");
+
+	if (!InitInstance(hInstance, nCmdShow))
+	{
+		return FALSE;
+	}
+
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
-	lua_close(L);
 
+	lua_close(L);
 	return (int) msg.wParam;
 }
 
@@ -160,14 +164,64 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	PAINTSTRUCT ps;
 	HDC hdc;
+	static cairo_surface_t* mainsurface = NULL;
 
 	switch (message)
 	{
+	case WM_CREATE:
+	{
+		mainsurface = cairo_image_surface_create(CAIRO_FORMAT_RGB24, 800, 600);
+		break;
+	}
+
 	case WM_PAINT:
+	{
+		if (!mainsurface) break;
+
+		lua_checkstack(L, 3);
+		lua_getglobal(L, "luanovel");
+		if (lua_isnil(L, -1)) {
+			lua_pop(L, 1);
+			break;
+		}
+
+		lua_getfield(L, -1, "rendering");
+		lua_remove(L, -2); // luanovel
+		lua_getfield(L, -1, "on_draw");
+		lua_remove(L, -2); // rendering
+		if (lua_isnil(L, -1)) {
+			lua_pop(L, 1);
+			break;
+		}
+
 		hdc = BeginPaint(hWnd, &ps);
+		cairo_t* cr = cairo_create(mainsurface);
+		cairo_set_source_rgb(cr, 1, 1, 1);
+		cairo_paint(cr);
+		lua_pushlightuserdata(L, cr);
+		lua_pushliteral(L, "test");
+		lua_pcall(L, 2, 0, 0);
+
+		cairo_destroy(cr);
+
+		cairo_surface_t* surface = cairo_win32_surface_create(hdc);
+		cr = cairo_create(surface);
+		cairo_set_source_surface(cr, mainsurface, 0, 0);
+		cairo_paint(cr);
+		cairo_destroy(cr);
+		cairo_surface_destroy(surface);
+
+		static bool test = false;
+		
+		if (!test) {
+			cairo_surface_write_to_png(mainsurface, "test.png");
+			test = true;
+		}
 		EndPaint(hWnd, &ps);
 		break;
+	}
 	case WM_DESTROY:
+		cairo_surface_destroy(mainsurface);
 		PostQuitMessage(0);
 		break;
 	default:

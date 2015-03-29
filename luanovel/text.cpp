@@ -20,24 +20,22 @@ int _lua_text_interpret(lua_State* L)
 			escaping = true;
 		}
 		else if (*i == '\x03') { // Lua inline expression
-			char* exp = strdup(++i);
-			char* texp = exp;
+			const char* exp = ++i;
+			const char* texp = exp;
 			for (; *texp != '\x03'; texp++, i++) {
 				if (*texp == 0) {
 					lua_pushliteral(L, "Unexpected end of Lua inline expression");
-					free(exp);
 					return lua_error(L);
 				}
 			}
-			*texp = 0;
+			std::string ex(exp, texp);
 			lua_checkstack(L, 1);
 			lua_getglobal(L, "tostring");
-			char* expression = (char *)malloc(strlen(exp) + 10);
+			char* expression = (char *)malloc(ex.size() + 10);
 			strcpy(expression, "return (");
-			strcat(expression, exp);
+			strcat(expression, ex.c_str());
 			strcat(expression, ")");
 			luaL_dostring(L, expression);
-			free(exp);
 			free(expression);
 			lua_pcall(L, 1, 1, 0);
 

@@ -5,48 +5,58 @@
 #include <list>
 
 typedef struct {
-	Bitmap* b;
+	cairo_surface_t* b;
 } bitmap_wrapper;
 
-typedef struct {
-	FT_Face f;
-} font_wrapper;
+typedef bitmap_wrapper* imageobj_t;
 
+PangoFontMap* pango_fontmap;
+PangoContext* pango_ctx;
 
 // ------------------- LUA FUNCTIONS -------------------
 
+// imageobj:dispose()
+// also run by __gc
+static int lua_image_obj_dispose(lua_State* L)
+{
+	imageobj_t b = (imageobj_t)lua_touserdata(L, -1);
+	lua_pop(L, 1);
+	if (!(b->b)) return 0;
+	cairo_surface_destroy(b->b);
+	b->b = NULL;
+	return 0;
+}
+
 // image.load(filename)
-static int lua_image_load(lua_State* L) {
+static int lua_image_load(lua_State* L)
+{
 	const char* filename = lua_tostring(L, -1);
 	lua_pop(L, 1);
 
-	wchar_t* tmp = helper_utf8_to_utf16(filename);
-	Bitmap* ret = Bitmap::FromFile(tmp);
-	free(tmp);
+	cairo_surface_t* ret = cairo_image_surface_create_from_png(filename);
+	if (!ret) {
+		lua_pushnil(L);
+		return 1;
+	}
 
-	lua_checkstack(L, 5);
-	bitmap_wrapper* b = (bitmap_wrapper*)lua_newuserdata(L, sizeof(bitmap_wrapper));
-	lua_pushvalue(L, -1);
-	lua_insert(L, 0); // idx 0 has bitmap_wrapper*
+	lua_checkstack(L, 4);
+	imageobj_t b = (imageobj_t)lua_newuserdata(L, sizeof(bitmap_wrapper));
 	lua_newtable(L);
 	lua_pushliteral(L, "__gc");
-	lua_pushcfunction(L, [](lua_State* L) {
-		bitmap_wrapper* b = (bitmap_wrapper*)lua_touserdata(L, -1);
-		lua_pop(L, 1);
-		delete b->b;
-		b->b = NULL;
-		return 0;
-	});
+	lua_pushcfunction(L, &lua_image_obj_dispose);
+	lua_rawset(L, -3);
+	lua_pushliteral(L, "index");
+	lua_newtable(L);
+	helper_lua_addNewFunction(L, "dispose", &lua_image_obj_dispose);
 	lua_rawset(L, -3);
 	lua_setmetatable(L, -2);
+
 	b->b = ret;
-	lua_rawset(L, -3);
-	lua_pop(L, 1);
-	// returns bitmap_wrapper*
+	// returns imageobj_t
 	return 1;
 }
 
-// rendering.drawtext(lightuserdata, string, number, number, string)
+// rendering.drawtext(cairo_t*, string, number, number, string)
 static int lua_rendering_drawtext(lua_State* L)
 {
 	cairo_t* g = (cairo_t *)lua_touserdata(L, -5);
@@ -56,19 +66,10 @@ static int lua_rendering_drawtext(lua_State* L)
 	const char* fontstyle = lua_tostring(L, -1);
 	lua_pop(L, 5);
 
-	PangoFontMap* fontmap = pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT);
-	PangoContext* ctx = pango_font_map_create_context(fontmap);
-
-	cairo_font_options_t* fo = cairo_font_options_create();
-	cairo_font_options_set_antialias(fo, CAIRO_ANTIALIAS_SUBPIXEL);
-	cairo_font_options_set_subpixel_order(fo, CAIRO_SUBPIXEL_ORDER_RGB);
-	cairo_font_options_set_hint_style(fo, CAIRO_HINT_STYLE_SLIGHT);
-	pango_cairo_context_set_font_options(ctx, fo);
-
-	PangoLayout* layout = pango_layout_new(ctx);
+	PangoLayout* layout = pango_layout_new(pango_ctx);
 	PangoFontDescription* desc = pango_font_description_from_string(fontstyle);
 	pango_layout_set_font_description(layout, desc);
-	pango_font_map_load_font(fontmap, ctx, desc);
+	pango_font_map_load_font(pango_fontmap, pango_ctx, desc);
 	pango_font_description_free(desc);
 	
 	pango_layout_set_markup(layout, text, -1);
@@ -77,10 +78,31 @@ static int lua_rendering_drawtext(lua_State* L)
 	cairo_move_to(g, x, y);
 	pango_cairo_show_layout(g, layout);
 	
-	cairo_font_options_destroy(fo);
 	g_object_unref(layout);
-	g_object_unref(ctx);
-	g_object_unref(fontmap);
+	return 0;
+}
+
+// rendering.drawimage(cairo_t*, imageobj, x, y, scalex, scaley)
+static int lua_rendering_drawimage(lua_State* L)
+{
+	cairo_t* cr = (cairo_t *)lua_touserdata(L, -6);
+	imageobj_t b = (imageobj_t)lua_touserdata(L, -5);
+	double x = lua_tonumber(L, -4);
+	double y = lua_tonumber(L, -3);
+	double scalex = lua_tonumber(L, -2);
+	double scaley = lua_tonumber(L, -1);
+	lua_pop(L, 6);
+
+	if (!(b->b)) {
+		return 0;
+	}
+
+	cairo_save(cr);
+	cairo_translate(cr, x, y);
+	cairo_scale(cr, scalex, scaley);
+	cairo_set_source_surface(cr, b->b, 0, 0);
+	cairo_paint(cr);
+	cairo_restore(cr);
 
 	return 0;
 }
@@ -97,16 +119,25 @@ int draw_initialize(lua_State* L)
 	lua_pushliteral(L, "rendering");
 	lua_newtable(L);
 	helper_lua_addNewFunction(L, "drawtext", &lua_rendering_drawtext);
+	helper_lua_addNewFunction(L, "drawimage", &lua_rendering_drawimage);
 	lua_rawset(L, -3);
+
+	pango_fontmap = pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT);
+	pango_ctx = pango_font_map_create_context(pango_fontmap);
+
+	cairo_font_options_t* fo = cairo_font_options_create();
+	cairo_font_options_set_antialias(fo, CAIRO_ANTIALIAS_SUBPIXEL);
+	cairo_font_options_set_subpixel_order(fo, CAIRO_SUBPIXEL_ORDER_RGB);
+	cairo_font_options_set_hint_style(fo, CAIRO_HINT_STYLE_SLIGHT);
+	pango_cairo_context_set_font_options(pango_ctx, fo);
+	cairo_font_options_destroy(fo);
+
 	return 0;
 }
 
-static int draw_loadResource(lua_State* L)
+int draw_cleanup()
 {
-	return 1;
-}
-
-static int draw_draw(lua_State* L)
-{
-	return 1;
+	g_object_unref(pango_ctx);
+	g_object_unref(pango_fontmap);
+	return 0;
 }

@@ -58,6 +58,14 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 		return 1;
 	}
 
+	ULONG_PTR token;
+	GdiplusStartupInput gsinput;
+	if (GdiplusStartup(&token, &gsinput, NULL)) {
+		// Gdiplus Error
+		lua_close(L);
+		return 1;
+	}
+
 	// Load lua libraries
 	luaopen_base(L);
 	luaopen_coroutine(L);
@@ -103,6 +111,8 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 	if (!InitInstance(hInstance, nCmdShow))
 	{
+		lua_close(L);
+		GdiplusShutdown(token);
 		return FALSE;
 	}
 
@@ -112,7 +122,9 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 		DispatchMessage(&msg);
 	}
 
+	draw_cleanup();
 	lua_close(L);
+	GdiplusShutdown(token);
 	return (int) msg.wParam;
 }
 
@@ -211,12 +223,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		cairo_destroy(cr);
 		cairo_surface_destroy(surface);
 
-		static bool test = false;
-		
-		if (!test) {
-			cairo_surface_write_to_png(mainsurface, "test.png");
-			test = true;
-		}
 		EndPaint(hWnd, &ps);
 		break;
 	}

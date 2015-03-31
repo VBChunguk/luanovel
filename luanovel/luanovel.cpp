@@ -197,10 +197,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 
-		lua_getfield(L, -1, "rendering");
-		lua_remove(L, -2); // luanovel
-		lua_getfield(L, -1, "on_draw");
-		lua_remove(L, -2); // rendering
+		helper_lua_getTableContent(L, "rendering.on_draw");
 		if (lua_isnil(L, -1)) {
 			lua_pop(L, 1);
 			break;

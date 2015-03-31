@@ -31,12 +31,7 @@ int _lua_text_interpret(lua_State* L)
 			std::string ex(exp, texp);
 			lua_checkstack(L, 1);
 			lua_getglobal(L, "tostring");
-			char* expression = (char *)malloc(ex.size() + 10);
-			strcpy(expression, "return (");
-			strcat(expression, ex.c_str());
-			strcat(expression, ")");
-			luaL_dostring(L, expression);
-			free(expression);
+			luaL_dostring(L, (std::string("return (") + ex + ")").c_str());
 			lua_pcall(L, 1, 1, 0);
 
 			output += lua_tostring(L, -1);

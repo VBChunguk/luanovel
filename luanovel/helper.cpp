@@ -9,6 +9,30 @@ void helper_lua_addNewFunction(lua_State* L, const char* fname, lua_CFunction fu
 	lua_rawset(L, -3);
 }
 
+void helper_lua_getTableContent(lua_State* L, const char* name)
+{
+	char* tname = (char*)malloc(strlen(name) + 1);
+	char* oname = tname;
+	const char* p = tname;
+	strcpy(tname, name);
+	for (; *tname != 0; tname++)
+	{
+		if (*tname == '.') {
+			*tname = 0;
+			lua_getfield(L, -1, p);
+			lua_remove(L, -2);
+			if (lua_isnil(L, -1)) {
+				free(tname);
+				return;
+			}
+			p = tname + 1;
+		}
+	}
+	lua_getfield(L, -1, p);
+	lua_remove(L, -2);
+	free(oname);
+}
+
 wchar_t* helper_utf8_to_utf16(const char* utf8)
 {
 	wchar_t* ret = NULL;

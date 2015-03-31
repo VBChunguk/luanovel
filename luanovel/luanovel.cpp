@@ -31,6 +31,7 @@
 #include "helper.h"
 
 #define MAX_LOADSTRING 100
+#define WINDOW_STYLE WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU
 
 HINSTANCE hInst;
 HWND ghWnd;
@@ -157,7 +158,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    hInst = hInstance;
 
-   hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+   hWnd = CreateWindow(szWindowClass, szTitle, WINDOW_STYLE,
       CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, hInstance, NULL);
 
    if (!hWnd)
@@ -182,7 +183,44 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_CREATE:
 	{
-		mainsurface = cairo_image_surface_create(CAIRO_FORMAT_RGB24, 800, 600);
+		lua_checkstack(L, 2);
+		lua_getglobal(L, "luanovel");
+		if (lua_isnil(L, -1)) {
+			lua_pop(L, 1);
+			// XXX: Fatal error
+			break;
+		}
+		helper_lua_getTableContent(L, "on_init");
+		int width, height;
+		if (lua_isnil(L, -1)) {
+			width = 800;
+			height = 600;
+		}
+		else {
+			lua_pcall(L, 0, 0, 0);
+
+			lua_getglobal(L, "luanovel");
+			lua_pushvalue(L, -1);
+			helper_lua_getTableContent(L, "rendering.width");
+			width = (int)lua_tonumber(L, -1);
+			lua_pop(L, 1);
+			helper_lua_getTableContent(L, "rendering.height");
+			height = (int)lua_tonumber(L, -1);
+			lua_pop(L, 1);
+		}
+		mainsurface = cairo_image_surface_create(CAIRO_FORMAT_RGB24,
+			width, height);
+
+		RECT rc = { 0, 0, width, height };
+		AdjustWindowRect(&rc, WINDOW_STYLE, FALSE);
+		SetWindowPos(hWnd, NULL,
+			-1, -1, rc.right - rc.left, rc.bottom - rc.top,
+			SWP_NOMOVE | SWP_NOZORDER);
+		break;
+	}
+
+	case WM_SIZE:
+	{
 		break;
 	}
 

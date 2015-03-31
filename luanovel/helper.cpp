@@ -15,6 +15,8 @@ void helper_lua_getTableContent(lua_State* L, const char* name)
 	char* oname = tname;
 	const char* p = tname;
 	strcpy(tname, name);
+
+	lua_checkstack(L, 2);
 	for (; *tname != 0; tname++)
 	{
 		if (*tname == '.') {
@@ -39,10 +41,7 @@ wchar_t* helper_utf8_to_utf16(const char* utf8)
 #ifdef _WIN32
 	int size;
 	size = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, NULL, 0);
-	if (size == 0) {
-		int a = GetLastError();
-		a = a;
-	}
+	if (size == 0) return NULL;
 	ret = (wchar_t*)malloc(sizeof(wchar_t) * (size + 1));
 	MultiByteToWideChar(CP_UTF8, 0, utf8, -1, ret, size);
 #else

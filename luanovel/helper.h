@@ -5,3 +5,6 @@ void helper_lua_getTableContent(lua_State* L, const char* name);
 
 // Please free() the return value after use.
 wchar_t* helper_utf8_to_utf16(const char* utf8);
+
+// Reads varint from file.
+size_t helper_read_varint(FILE* fp);

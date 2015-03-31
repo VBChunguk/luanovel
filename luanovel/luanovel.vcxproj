@@ -89,10 +89,12 @@
     <ClInclude Include="helper.h" />
     <ClInclude Include="luanovel.h" />
     <ClInclude Include="render-engine.h" />
+    <ClInclude Include="resource-manager.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="text.h" />
+    <ClInclude Include="types.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="character.cpp" />
@@ -100,6 +102,7 @@
     <ClCompile Include="helper.cpp" />
     <ClCompile Include="luanovel.cpp" />
     <ClCompile Include="render-engine.cpp" />
+    <ClCompile Include="resource-manager.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>

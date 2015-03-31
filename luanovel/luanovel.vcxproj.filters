@@ -42,6 +42,12 @@
     <ClInclude Include="character.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="resource-manager.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="types.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -63,6 +69,9 @@
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="character.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="resource-manager.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>

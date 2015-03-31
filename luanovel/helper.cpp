@@ -49,3 +49,19 @@ wchar_t* helper_utf8_to_utf16(const char* utf8)
 #endif
 	return ret;
 }
+
+size_t helper_read_varint(FILE* fp)
+{
+	size_t ret = 0;
+	unsigned char byte = 0;
+	do {
+		unsigned char tbyte;
+		int n_read = fread(&byte, 1, 1, fp);
+		if (n_read < 1) break;
+
+		tbyte = byte & 0x7f;
+		ret <<= 7;
+		ret |= tbyte;
+	} while (byte & 0x80);
+	return ret;
+}

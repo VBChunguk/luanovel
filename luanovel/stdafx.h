@@ -21,19 +21,7 @@
 // TODO: 프로그램에 필요한 추가 헤더는 여기에서 참조합니다.
 #include <string>
 
-#include <ShlObj.h>
-#include <gdiplus.h>
-using namespace Gdiplus;
-
 #include "lib/lua.hpp"
-
-#include <ft2build.h>
-#include FT_FREETYPE_H
-#include FT_OUTLINE_H
-#include FT_GLYPH_H
-#include FT_BITMAP_H
-
-#include <fontconfig/fontconfig.h>
 
 #include <cairo.h>
 #include <cairo-win32.h>

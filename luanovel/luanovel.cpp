@@ -59,14 +59,6 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 		return 1;
 	}
 
-	ULONG_PTR token;
-	GdiplusStartupInput gsinput;
-	if (GdiplusStartup(&token, &gsinput, NULL)) {
-		// Gdiplus Error
-		lua_close(L);
-		return 1;
-	}
-
 	// Load lua libraries
 	luaopen_base(L);
 	luaopen_coroutine(L);
@@ -116,7 +108,6 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	if (!InitInstance(hInstance, nCmdShow))
 	{
 		lua_close(L);
-		GdiplusShutdown(token);
 		return FALSE;
 	}
 
@@ -128,7 +119,6 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 	draw_cleanup();
 	lua_close(L);
-	GdiplusShutdown(token);
 	return (int) msg.wParam;
 }
 

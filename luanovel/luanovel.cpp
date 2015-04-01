@@ -95,6 +95,9 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	lua_pushliteral(L, "outputmode");
 	lua_pushliteral(L, "stdout");
 	lua_rawset(L, -3);
+	lua_pushliteral(L, "locale");
+	lua_pushliteral(L, "ko-KR");
+	lua_rawset(L, -3);
 	lua_rawset(L, -3);
 
 	lua_pushliteral(L, "text");

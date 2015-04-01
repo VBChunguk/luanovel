@@ -61,6 +61,11 @@ static int lua_image_load(lua_State* L)
 static int lua_image_loadptr(lua_State* L)
 {
 	lua_getfield(L, -1, "locale");
+	if (lua_isnil(L, -1)) {
+		lua_pop(L, 1);
+		lua_getglobal(L, "luanovel");
+		helper_lua_getTableContent(L, "system.locale");
+	}
 	const char* locale = lua_tostring(L, -1);
 	lua_getfield(L, -2, "pointer");
 	luanovel_pointer_t pointer = (luanovel_pointer_t)lua_tointeger(L, -1);

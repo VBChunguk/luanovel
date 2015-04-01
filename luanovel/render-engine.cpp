@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "render-engine.h"
 #include "helper.h"
+#include "resource-manager.h"
 
 #include <list>
 
@@ -34,6 +35,43 @@ static int lua_image_load(lua_State* L)
 	lua_pop(L, 1);
 
 	cairo_surface_t* ret = cairo_image_surface_create_from_png(filename);
+	if (!ret) {
+		lua_pushnil(L);
+		return 1;
+	}
+
+	lua_checkstack(L, 4);
+	imageobj_t b = (imageobj_t)lua_newuserdata(L, sizeof(bitmap_wrapper));
+	lua_newtable(L);
+	lua_pushliteral(L, "__gc");
+	lua_pushcfunction(L, &lua_image_obj_dispose);
+	lua_rawset(L, -3);
+	lua_pushliteral(L, "index");
+	lua_newtable(L);
+	helper_lua_addNewFunction(L, "dispose", &lua_image_obj_dispose);
+	lua_rawset(L, -3);
+	lua_setmetatable(L, -2);
+
+	b->b = ret;
+	// returns imageobj_t
+	return 1;
+}
+
+// image.loadptr(filename)
+static int lua_image_loadptr(lua_State* L)
+{
+	lua_getfield(L, -1, "locale");
+	const char* locale = lua_tostring(L, -1);
+	lua_getfield(L, -2, "pointer");
+	luanovel_pointer_t pointer = (luanovel_pointer_t)lua_tointeger(L, -1);
+
+	resource_open(locale);
+	resource_request_t req = { locale, pointer };
+	void* closure = resource_make_closure(&req);
+	cairo_surface_t* ret = cairo_image_surface_create_from_png_stream(resource_cairo_read, closure);
+	resource_closure_destroy(closure);
+	lua_pop(L, 3);
+
 	if (!ret) {
 		lua_pushnil(L);
 		return 1;
@@ -114,6 +152,7 @@ int draw_initialize(lua_State* L)
 	lua_pushliteral(L, "image");
 	lua_newtable(L);
 	helper_lua_addNewFunction(L, "load", &lua_image_load);
+	helper_lua_addNewFunction(L, "loadptr", &lua_image_loadptr);
 	lua_rawset(L, -3);
 
 	lua_pushliteral(L, "rendering");

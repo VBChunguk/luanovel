@@ -17,10 +17,13 @@ std::map<std::string, FILE*> resourcefile;
 
 int resource_open(const char* locale)
 {
+	std::string locale_str(locale);
+	if (resourcefile.find(locale_str) != resourcefile.end()) return 0;
+
 	FILE* fp = fopen(locale, "rb");
 	if (fp == NULL) return 1;
 	// TODO: check integrity
-	resourcefile[std::string(locale)] = fp;
+	resourcefile[locale_str] = fp;
 	return 0;
 }
 
@@ -33,14 +36,14 @@ void* resource_make_closure(resource_request_t* request)
 
 	ret = (resource_closure_t)malloc(sizeof(_resource_closure_t));
 	if (ret == NULL) return NULL;
-	memset(ret, 0, sizeof(resource_request_t));
+	memset(ret, 0, sizeof(_resource_closure_t));
 	ret->request = request;
 	
 	fp = resourcefile[request->locale];
 	ret->fp = fp;
 	fseek(fp, request->pointer, SEEK_SET);
 	n_read = fread(&fileheader, 4, 1, fp);
-	if (n_read < 4) {
+	if (n_read < 1) {
 		free(ret);
 		return NULL;
 	}
@@ -52,6 +55,11 @@ void* resource_make_closure(resource_request_t* request)
 	return ret;
 }
 
+void resource_closure_destroy(void* closure)
+{
+	free(closure);
+}
+
 cairo_status_t resource_cairo_read(void* closure, unsigned char* data, unsigned int len)
 {
 	resource_closure_t cls = (resource_closure_t)closure;
@@ -59,6 +67,8 @@ cairo_status_t resource_cairo_read(void* closure, unsigned char* data, unsigned 
 	size_t bytes_left = cls->size - cls->offset;
 	unsigned int to_read = (len > bytes_left) ? bytes_left : len;
 	unsigned int cnt = 0;
+
+	fseek(fp, cls->start + cls->offset, SEEK_SET);
 	while (to_read > 0) {
 		size_t n_read = fread(data + cnt, 1, to_read, fp);
 		if (n_read == 0) break;

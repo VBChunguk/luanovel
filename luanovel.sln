@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.30723.0
+VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "luanovel", "luanovel\luanovel.vcxproj", "{D5AB98DA-4F79-410C-9A26-8F8F1BD346C0}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "luanovel-resource", "luanovel-resource\luanovel-resource.vcxproj", "{02C402F2-F06B-44D5-9559-013F0802872E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{D5AB98DA-4F79-410C-9A26-8F8F1BD346C0}.Debug|Win32.Build.0 = Debug|Win32
 		{D5AB98DA-4F79-410C-9A26-8F8F1BD346C0}.Release|Win32.ActiveCfg = Release|Win32
 		{D5AB98DA-4F79-410C-9A26-8F8F1BD346C0}.Release|Win32.Build.0 = Release|Win32
+		{02C402F2-F06B-44D5-9559-013F0802872E}.Debug|Win32.ActiveCfg = Debug|Win32
+		{02C402F2-F06B-44D5-9559-013F0802872E}.Debug|Win32.Build.0 = Debug|Win32
+		{02C402F2-F06B-44D5-9559-013F0802872E}.Release|Win32.ActiveCfg = Release|Win32
+		{02C402F2-F06B-44D5-9559-013F0802872E}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -24,7 +24,7 @@ void helper_lua_getTableContent(lua_State* L, const char* name)
 			lua_getfield(L, -1, p);
 			lua_remove(L, -2);
 			if (lua_isnil(L, -1)) {
-				free(tname);
+				free(oname);
 				return;
 			}
 			p = tname + 1;

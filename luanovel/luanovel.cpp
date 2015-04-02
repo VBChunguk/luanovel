@@ -43,6 +43,7 @@ cairo_surface_t* mainsurface;
 ATOM				MyRegisterClass(HINSTANCE hInstance);
 BOOL				InitInstance(HINSTANCE, int);
 LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
+void	CALLBACK	OnStep(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
 
 int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -101,6 +102,10 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	draw_initialize(L);
 	character_initialize(L);
 
+	lua_pushliteral(L, "status"); // this object is saved in savefile
+	lua_newtable(L);
+	lua_rawset(L, -3);
+
 	lua_setglobal(L, "luanovel");
 
 	luaL_dofile(L, "init.luac");
@@ -115,22 +120,18 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 	lua_checkstack(L, 2);
 	lua_getglobal(L, "luanovel");
-	helper_lua_getTableContent(L, "on_init");
-	int width, height;
-	if (lua_isnil(L, -1)) {
-		width = 800;
-		height = 600;
-	}
-	else {
+	helper_lua_getTableContent(L, "system.on_init");
+	int width = 800, height = 600;
+	if (lua_isfunction(L, -1)) {
 		lua_pcall(L, 0, 0, 0);
 
 		lua_getglobal(L, "luanovel");
 		lua_pushvalue(L, -1);
 		helper_lua_getTableContent(L, "rendering.width");
-		width = (int)lua_tonumber(L, -1);
+		if (lua_isnumber(L, -1)) width = (int)lua_tonumber(L, -1);
 		lua_pop(L, 1);
 		helper_lua_getTableContent(L, "rendering.height");
-		height = (int)lua_tonumber(L, -1);
+		if (lua_isnumber(L, -1)) height = (int)lua_tonumber(L, -1);
 		lua_pop(L, 1);
 	}
 
@@ -142,6 +143,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 		-1, -1, rc.right - rc.left, rc.bottom - rc.top,
 		SWP_NOMOVE | SWP_NOZORDER);
 
+	SetTimer(ghWnd, 1, 16, &OnStep);
 	while (true)
 	{
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
@@ -152,15 +154,15 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 		else {
 			lua_checkstack(L, 3);
 			lua_getglobal(L, "luanovel");
-			if (lua_isnil(L, -1)) {
+			if (!lua_istable(L, -1)) {
 				lua_pop(L, 1);
-				break;
+				continue;
 			}
 
 			helper_lua_getTableContent(L, "rendering.on_draw");
-			if (lua_isnil(L, -1)) {
+			if (!lua_isfunction(L, -1)) {
 				lua_pop(L, 1);
-				break;
+				continue;
 			}
 
 			cairo_t* cr = cairo_create(mainsurface);
@@ -174,6 +176,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 			InvalidateRect(ghWnd, NULL, FALSE);
 		}
 	}
+	KillTimer(ghWnd, 1);
 
 	cairo_surface_destroy(mainsurface);
 
@@ -182,6 +185,36 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	return (int) msg.wParam;
 }
 
+void CALLBACK OnStep(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
+{
+	lua_checkstack(L, 3);
+	lua_getglobal(L, "luanovel");
+	if (!lua_istable(L, -1)) {
+		lua_pop(L, 1);
+		return;
+	}
+	helper_lua_getTableContent(L, "system.on_step");
+	if (!lua_isfunction(L, -1)) {
+		lua_pop(L, 1);
+		return;
+	}
+	lua_pushliteral(L, "test"); // phase
+	lua_pcall(L, 1, 0, 0);
+
+	// internal step function
+	lua_getglobal(L, "luanovel");
+	if (!lua_istable(L, -1)) {
+		lua_pop(L, 1);
+		return;
+	}
+	helper_lua_getTableContent(L, "system._on_step");
+	if (!lua_isfunction(L, -1)) {
+		lua_pop(L, 1);
+		return;
+	}
+	lua_pushliteral(L, "test"); // phase
+	lua_pcall(L, 1, 0, 0);
+}
 
 
 ATOM MyRegisterClass(HINSTANCE hInstance)

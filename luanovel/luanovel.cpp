@@ -38,6 +38,7 @@ HWND ghWnd;
 TCHAR szTitle[MAX_LOADSTRING];
 TCHAR szWindowClass[MAX_LOADSTRING];
 lua_State* L;
+cairo_surface_t* mainsurface;
 
 ATOM				MyRegisterClass(HINSTANCE hInstance);
 BOOL				InitInstance(HINSTANCE, int);
@@ -111,11 +112,70 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 		return FALSE;
 	}
 
-	while (GetMessage(&msg, NULL, 0, 0))
-	{
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
+
+	lua_checkstack(L, 2);
+	lua_getglobal(L, "luanovel");
+	helper_lua_getTableContent(L, "on_init");
+	int width, height;
+	if (lua_isnil(L, -1)) {
+		width = 800;
+		height = 600;
 	}
+	else {
+		lua_pcall(L, 0, 0, 0);
+
+		lua_getglobal(L, "luanovel");
+		lua_pushvalue(L, -1);
+		helper_lua_getTableContent(L, "rendering.width");
+		width = (int)lua_tonumber(L, -1);
+		lua_pop(L, 1);
+		helper_lua_getTableContent(L, "rendering.height");
+		height = (int)lua_tonumber(L, -1);
+		lua_pop(L, 1);
+	}
+
+	mainsurface = cairo_image_surface_create(CAIRO_FORMAT_RGB24, width, height);
+
+	RECT rc = { 0, 0, width, height };
+	AdjustWindowRect(&rc, WINDOW_STYLE, FALSE);
+	SetWindowPos(ghWnd, NULL,
+		-1, -1, rc.right - rc.left, rc.bottom - rc.top,
+		SWP_NOMOVE | SWP_NOZORDER);
+
+	while (true)
+	{
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+			if (msg.message == WM_QUIT) break;
+		}
+		else {
+			lua_checkstack(L, 3);
+			lua_getglobal(L, "luanovel");
+			if (lua_isnil(L, -1)) {
+				lua_pop(L, 1);
+				break;
+			}
+
+			helper_lua_getTableContent(L, "rendering.on_draw");
+			if (lua_isnil(L, -1)) {
+				lua_pop(L, 1);
+				break;
+			}
+
+			cairo_t* cr = cairo_create(mainsurface);
+			cairo_set_source_rgb(cr, 1, 1, 1);
+			cairo_paint(cr);
+			lua_pushlightuserdata(L, cr);
+			lua_pushliteral(L, "test");
+			lua_pcall(L, 2, 0, 0);
+			cairo_destroy(cr);
+
+			InvalidateRect(ghWnd, NULL, FALSE);
+		}
+	}
+
+	cairo_surface_destroy(mainsurface);
 
 	draw_cleanup();
 	lua_close(L);
@@ -168,94 +228,28 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	PAINTSTRUCT ps;
 	HDC hdc;
-	static cairo_surface_t* mainsurface = NULL;
+	PAINTSTRUCT ps;
 
 	switch (message)
 	{
-	case WM_CREATE:
-	{
-		lua_checkstack(L, 2);
-		lua_getglobal(L, "luanovel");
-		if (lua_isnil(L, -1)) {
-			lua_pop(L, 1);
-			// XXX: Fatal error
-			break;
-		}
-		helper_lua_getTableContent(L, "on_init");
-		int width, height;
-		if (lua_isnil(L, -1)) {
-			width = 800;
-			height = 600;
-		}
-		else {
-			lua_pcall(L, 0, 0, 0);
-
-			lua_getglobal(L, "luanovel");
-			lua_pushvalue(L, -1);
-			helper_lua_getTableContent(L, "rendering.width");
-			width = (int)lua_tonumber(L, -1);
-			lua_pop(L, 1);
-			helper_lua_getTableContent(L, "rendering.height");
-			height = (int)lua_tonumber(L, -1);
-			lua_pop(L, 1);
-		}
-		mainsurface = cairo_image_surface_create(CAIRO_FORMAT_RGB24,
-			width, height);
-
-		RECT rc = { 0, 0, width, height };
-		AdjustWindowRect(&rc, WINDOW_STYLE, FALSE);
-		SetWindowPos(hWnd, NULL,
-			-1, -1, rc.right - rc.left, rc.bottom - rc.top,
-			SWP_NOMOVE | SWP_NOZORDER);
-		break;
-	}
-
 	case WM_SIZE:
 	{
 		break;
 	}
-
 	case WM_PAINT:
 	{
-		if (!mainsurface) break;
-
-		lua_checkstack(L, 3);
-		lua_getglobal(L, "luanovel");
-		if (lua_isnil(L, -1)) {
-			lua_pop(L, 1);
-			break;
-		}
-
-		helper_lua_getTableContent(L, "rendering.on_draw");
-		if (lua_isnil(L, -1)) {
-			lua_pop(L, 1);
-			break;
-		}
-
 		hdc = BeginPaint(hWnd, &ps);
-		cairo_t* cr = cairo_create(mainsurface);
-		cairo_set_source_rgb(cr, 1, 1, 1);
-		cairo_paint(cr);
-		lua_pushlightuserdata(L, cr);
-		lua_pushliteral(L, "test");
-		lua_pcall(L, 2, 0, 0);
-
-		cairo_destroy(cr);
-
 		cairo_surface_t* surface = cairo_win32_surface_create(hdc);
-		cr = cairo_create(surface);
+		cairo_t* cr = cairo_create(surface);
 		cairo_set_source_surface(cr, mainsurface, 0, 0);
 		cairo_paint(cr);
 		cairo_destroy(cr);
 		cairo_surface_destroy(surface);
-
 		EndPaint(hWnd, &ps);
 		break;
 	}
 	case WM_DESTROY:
-		cairo_surface_destroy(mainsurface);
 		PostQuitMessage(0);
 		break;
 	default:

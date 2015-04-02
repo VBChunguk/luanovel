@@ -78,7 +78,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	lua_pushliteral(L, "system");
 	lua_newtable(L);
 	helper_lua_addNewFunction(L, "message", [](lua_State* L) {
-		const char* message = lua_tostring(L, -1);
+		const char* message = lua_tostring(L, 1);
 		if (message == NULL) return 0;
 		lua_pop(L, 1);
 		MessageBoxA(ghWnd, message, NULL, MB_OK);
@@ -94,13 +94,16 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 	lua_pushliteral(L, "text");
 	lua_newtable(L);
-	helper_lua_addNewFunction(L, "_interpret", &_lua_text_interpret);
 	lua_rawset(L, -3);
 
 	draw_initialize(L);
 	character_initialize(L);
 
 	lua_pushliteral(L, "status"); // this object is saved in savefile
+	lua_newtable(L);
+	lua_rawset(L, -3);
+
+	lua_pushliteral(L, "internal"); // for internal functions etc
 	lua_newtable(L);
 	lua_rawset(L, -3);
 
@@ -205,7 +208,7 @@ void CALLBACK OnStep(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
 		lua_pop(L, 1);
 		return;
 	}
-	helper_lua_getTableContent(L, "system._on_step");
+	helper_lua_getTableContent(L, "internal.on_step");
 	if (!lua_isfunction(L, -1)) {
 		lua_pop(L, 1);
 		return;

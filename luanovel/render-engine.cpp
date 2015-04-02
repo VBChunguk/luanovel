@@ -3,8 +3,6 @@
 #include "helper.h"
 #include "resource-manager.h"
 
-#include <list>
-
 typedef struct {
 	cairo_surface_t* b;
 } bitmap_wrapper;
@@ -20,7 +18,7 @@ PangoContext* pango_ctx;
 // also run by __gc
 static int lua_image_obj_dispose(lua_State* L)
 {
-	imageobj_t b = (imageobj_t)lua_touserdata(L, -1);
+	imageobj_t b = (imageobj_t)lua_touserdata(L, 1);
 	lua_pop(L, 1);
 	if (!(b->b)) return 0;
 	cairo_surface_destroy(b->b);
@@ -31,7 +29,7 @@ static int lua_image_obj_dispose(lua_State* L)
 // image.load(filename)
 static int lua_image_load(lua_State* L)
 {
-	const char* filename = lua_tostring(L, -1);
+	const char* filename = lua_tostring(L, 1);
 	lua_pop(L, 1);
 
 	cairo_surface_t* ret = cairo_image_surface_create_from_png(filename);
@@ -46,7 +44,7 @@ static int lua_image_load(lua_State* L)
 	lua_pushliteral(L, "__gc");
 	lua_pushcfunction(L, &lua_image_obj_dispose);
 	lua_rawset(L, -3);
-	lua_pushliteral(L, "index");
+	lua_pushliteral(L, "__index");
 	lua_newtable(L);
 	helper_lua_addNewFunction(L, "dispose", &lua_image_obj_dispose);
 	lua_rawset(L, -3);
@@ -60,14 +58,14 @@ static int lua_image_load(lua_State* L)
 // image.loadptr(filename)
 static int lua_image_loadptr(lua_State* L)
 {
-	lua_getfield(L, -1, "locale");
+	lua_getfield(L, 1, "locale");
 	if (lua_isnil(L, -1)) {
 		lua_pop(L, 1);
 		lua_getglobal(L, "luanovel");
 		helper_lua_getTableContent(L, "system.locale");
 	}
 	const char* locale = lua_tostring(L, -1);
-	lua_getfield(L, -2, "pointer");
+	lua_getfield(L, 1, "pointer");
 	luanovel_pointer_t pointer = (luanovel_pointer_t)lua_tointeger(L, -1);
 
 	resource_open(locale);
@@ -88,7 +86,7 @@ static int lua_image_loadptr(lua_State* L)
 	lua_pushliteral(L, "__gc");
 	lua_pushcfunction(L, &lua_image_obj_dispose);
 	lua_rawset(L, -3);
-	lua_pushliteral(L, "index");
+	lua_pushliteral(L, "__index");
 	lua_newtable(L);
 	helper_lua_addNewFunction(L, "dispose", &lua_image_obj_dispose);
 	lua_rawset(L, -3);
@@ -102,11 +100,11 @@ static int lua_image_loadptr(lua_State* L)
 // rendering.drawtext(cairo_t*, string, number, number, string)
 static int lua_rendering_drawtext(lua_State* L)
 {
-	cairo_t* g = (cairo_t *)lua_touserdata(L, -5);
-	const char* text = lua_tostring(L, -4);
-	double x = lua_tonumber(L, -3);
-	double y = lua_tonumber(L, -2);
-	const char* fontstyle = lua_tostring(L, -1);
+	cairo_t* cr = (cairo_t *)lua_touserdata(L, 1);
+	const char* text = lua_tostring(L, 2);
+	double x = lua_tonumber(L, 3);
+	double y = lua_tonumber(L, 4);
+	const char* fontstyle = lua_tostring(L, 5);
 	lua_pop(L, 5);
 
 	PangoLayout* layout = pango_layout_new(pango_ctx);
@@ -115,11 +113,13 @@ static int lua_rendering_drawtext(lua_State* L)
 	pango_font_map_load_font(pango_fontmap, pango_ctx, desc);
 	pango_font_description_free(desc);
 	
+	cairo_save(cr);
 	pango_layout_set_markup(layout, text, -1);
-	cairo_set_source_rgb(g, 0, 0, 0);
-	pango_cairo_update_layout(g, layout);
-	cairo_move_to(g, x, y);
-	pango_cairo_show_layout(g, layout);
+	pango_cairo_update_layout(cr, layout);
+	cairo_set_source_rgb(cr, 0, 0, 0);
+	cairo_move_to(cr, x, y);
+	pango_cairo_show_layout(cr, layout);
+	cairo_restore(cr);
 	
 	g_object_unref(layout);
 	return 0;
@@ -128,12 +128,12 @@ static int lua_rendering_drawtext(lua_State* L)
 // rendering.drawimage(cairo_t*, imageobj, x, y, scalex, scaley)
 static int lua_rendering_drawimage(lua_State* L)
 {
-	cairo_t* cr = (cairo_t *)lua_touserdata(L, -6);
-	imageobj_t b = (imageobj_t)lua_touserdata(L, -5);
-	double x = lua_tonumber(L, -4);
-	double y = lua_tonumber(L, -3);
-	double scalex = lua_tonumber(L, -2);
-	double scaley = lua_tonumber(L, -1);
+	cairo_t* cr = (cairo_t *)lua_touserdata(L, 1);
+	imageobj_t b = (imageobj_t)lua_touserdata(L, 2);
+	double x = lua_tonumber(L, 3);
+	double y = lua_tonumber(L, 4);
+	double scalex = lua_tonumber(L, 5);
+	double scaley = lua_tonumber(L, 6);
 	lua_pop(L, 6);
 
 	if (!(b->b)) {

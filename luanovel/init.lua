@@ -1,3 +1,17 @@
+luanovel.text._interpret = function (str)
+  local ret = str
+  ret = string.gsub(ret, "\\{", "\x04")
+  ret = string.gsub(ret, "\\}", "\x05")
+
+  ret = string.gsub(ret, "{(.-)}", function (s)
+    return load("return (" .. s .. ")")()
+  end)
+
+  ret = string.gsub(ret, "\x04", "{")
+  ret = string.gsub(ret, "\x05", "}")
+  return ret
+end
+
 luanovel.text._print = function (crt, str)
   local prtstr = luanovel.text._interpret(str)
   local ret = crt.name .. " \"" .. prtstr .. "\""
@@ -19,5 +33,3 @@ luanovel.character.new = function ()
   end
   return ret
 end
-
-luanovel.system.message("Output mode is " .. luanovel.system.outputmode)

@@ -62,12 +62,10 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	}
 
 	// Load lua libraries
-	luaopen_base(L);
-	luaopen_coroutine(L);
-	luaopen_package(L);
-	luaopen_utf8(L);
-	luaopen_string(L);
-	luaopen_math(L);
+	luaL_requiref(L, "base", &luaopen_base, 0);
+	luaL_requiref(L, "string", &luaopen_string, 1);
+	luaL_requiref(L, "utf8", &luaopen_utf8, 1);
+	luaL_requiref(L, "math", &luaopen_math, 1);
 
 	LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	LoadString(hInstance, IDC_LUANOVEL, szWindowClass, MAX_LOADSTRING);

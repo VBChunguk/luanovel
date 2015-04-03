@@ -110,7 +110,15 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	lua_setglobal(L, "luanovel");
 
 	luaL_dofile(L, "init.luac");
-	luaL_dofile(L, "main.txt");
+	int errorn = luaL_dofile(L, "main.txt");
+	if (errorn && errorn != LUA_ERRFILE) {
+		const char* message = lua_tostring(L, -1);
+		if (message == NULL) return 0;
+		lua_pop(L, 1);
+		MessageBoxA(ghWnd, message, NULL, MB_OK);
+		lua_close(L);
+		return FALSE;
+	}
 
 	if (!InitInstance(hInstance, nCmdShow))
 	{

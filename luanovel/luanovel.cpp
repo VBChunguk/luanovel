@@ -279,6 +279,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		break;
 	}
+	case WM_KEYDOWN:
+	{
+		if (wParam == VK_RETURN) {
+			lua_checkstack(L, 2);
+			lua_getglobal(L, "luanovel");
+			if (!lua_istable(L, -1)) {
+				lua_pop(L, 1);
+				break;
+			}
+			helper_lua_getTableContent(L, "text.advance");
+			if (!lua_isfunction(L, -1)) {
+				lua_pop(L, 1);
+				break;
+			}
+			lua_pcall(L, 0, 0, 0);
+		}
+		break;
+	}
 	case WM_PAINT:
 	{
 		hdc = BeginPaint(hWnd, &ps);

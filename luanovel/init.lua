@@ -86,3 +86,7 @@ end
 luanovel.internal.on_step = function (phase)
   luanovel.internal.text_on_step()
 end
+
+luanovel.internal.debug = function (cr, steptick, drawtick)
+  luanovel.rendering.drawtext(cr, "luanovel debug mode / step: " .. tostring(steptick) .. "ms / render: " .. tostring(drawtick) .. "ms", 0, 0, "NanumBarunGothic Regular 9")
+end

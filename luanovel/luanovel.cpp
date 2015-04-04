@@ -40,6 +40,9 @@ TCHAR szWindowClass[MAX_LOADSTRING];
 lua_State* L;
 cairo_surface_t* mainsurface;
 
+clock_t drawtime;
+clock_t steptime;
+
 ATOM				MyRegisterClass(HINSTANCE hInstance);
 BOOL				InitInstance(HINSTANCE, int);
 LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -161,6 +164,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 			if (msg.message == WM_QUIT) break;
 		}
 		else {
+			clock_t st = clock();
 			lua_checkstack(L, 3);
 			lua_getglobal(L, "luanovel");
 			if (!lua_istable(L, -1)) {
@@ -178,8 +182,17 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 			cairo_set_source_rgb(cr, 1, 1, 1);
 			cairo_paint(cr);
 			lua_pushlightuserdata(L, cr);
-			lua_pushliteral(L, "test");
+			lua_pushliteral(L, "test"); // phase
 			lua_pcall(L, 2, 0, 0);
+			clock_t en = clock();
+			drawtime = en - st;
+
+			lua_getglobal(L, "luanovel");
+			helper_lua_getTableContent(L, "internal.debug");
+			lua_pushlightuserdata(L, cr);
+			lua_pushinteger(L, steptime);
+			lua_pushinteger(L, drawtime);
+			lua_pcall(L, 3, 0, 0);
 			cairo_destroy(cr);
 
 			InvalidateRect(ghWnd, NULL, FALSE);
@@ -196,33 +209,38 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 void CALLBACK OnStep(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
 {
-	lua_checkstack(L, 3);
-	lua_getglobal(L, "luanovel");
-	if (!lua_istable(L, -1)) {
-		lua_pop(L, 1);
-		return;
-	}
-	helper_lua_getTableContent(L, "system.on_step");
-	if (!lua_isfunction(L, -1)) {
-		lua_pop(L, 1);
-		return;
-	}
-	lua_pushliteral(L, "test"); // phase
-	lua_pcall(L, 1, 0, 0);
+	if (idEvent == 1) {
+		clock_t st = clock();
+		lua_checkstack(L, 3);
+		lua_getglobal(L, "luanovel");
+		if (!lua_istable(L, -1)) {
+			lua_pop(L, 1);
+			return;
+		}
+		helper_lua_getTableContent(L, "system.on_step");
+		if (!lua_isfunction(L, -1)) {
+			lua_pop(L, 1);
+			return;
+		}
+		lua_pushliteral(L, "test"); // phase
+		lua_pcall(L, 1, 0, 0);
 
-	// internal step function
-	lua_getglobal(L, "luanovel");
-	if (!lua_istable(L, -1)) {
-		lua_pop(L, 1);
-		return;
+		// internal step function
+		lua_getglobal(L, "luanovel");
+		if (!lua_istable(L, -1)) {
+			lua_pop(L, 1);
+			return;
+		}
+		helper_lua_getTableContent(L, "internal.on_step");
+		if (!lua_isfunction(L, -1)) {
+			lua_pop(L, 1);
+			return;
+		}
+		lua_pushliteral(L, "test"); // phase
+		lua_pcall(L, 1, 0, 0);
+		clock_t en = clock();
+		steptime = en - st;
 	}
-	helper_lua_getTableContent(L, "internal.on_step");
-	if (!lua_isfunction(L, -1)) {
-		lua_pop(L, 1);
-		return;
-	}
-	lua_pushliteral(L, "test"); // phase
-	lua_pcall(L, 1, 0, 0);
 }
 
 

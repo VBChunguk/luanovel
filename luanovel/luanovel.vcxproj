@@ -124,6 +124,10 @@
 copy "$(IntermediateOutputPath)\%(Identity)c" "$(ProjectDir)"
 copy "$(IntermediateOutputPath)\%(Identity)c" "$(OutputPath)"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntermediateOutputPath)\%(Identity)c;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(ProjectDir)\util\luac.exe" -o "$(IntermediateOutputPath)\%(Identity)c" -s "%(FullPath)"
+copy "$(IntermediateOutputPath)\%(Identity)c" "$(ProjectDir)"
+copy "$(IntermediateOutputPath)\%(Identity)c" "$(OutputPath)"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntermediateOutputPath)\%(Identity)c;%(Outputs)</Outputs>
     </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
